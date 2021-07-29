@@ -1,0 +1,409 @@
+<html>
+<head>
+	<title>Subdivisions Surveyed By UAV</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+	<link rel="stylesheet" href="css/MarkerCluster.css" />
+	<link rel="stylesheet" href="css/MarkerCluster.Default.css" />
+	<link rel="stylesheet" href="css/style.css" />
+	<link rel="stylesheet" href="css/L.Control.MousePosition.css" />
+	<link rel="stylesheet" href="css/leaflet-measure.css" />
+	<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Poppins" />
+	<link rel="stylesheet" href="leaflet/leaflet-search-master/src/leaflet-search.css" />
+	<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+	<script src="leaflet/L.Control.MousePosition.js"></script>
+	<script src="js/leaflet.markercluster.js"></script>
+	<script src="jquery-2.1.1.min.js"></script>
+	<script src="js/leaflet-measure.js"></script>
+
+	<script src="leaflet/leaflet-search-master/src/leaflet-search.js"></script>
+	<!--script type="module" src="leaflet/leaflet-measure-master/src/leaflet-measure.js"></script-->
+	<!-- ESRI library-->
+	<script src="https://unpkg.com/esri-leaflet@2.5.0/dist/esri-leaflet.js"
+			integrity="sha512-ucw7Grpc+iEQZa711gcjgMBnmd9qju1CICsRaryvX7HJklK0pGl/prxKvtHwpgm5ZHdvAil7YPxI1oWPOWK3UQ=="
+			crossorigin=""></script>
+	<style>
+		#map {
+			height: 95%
+		}
+
+		/*.button {
+			background-color: #009639;
+			width: 5%;
+			font-family: 'Poppins', sans-serif;
+			border-radius: 10%;
+			border: none;
+			color: white;
+			padding: 3px 5px;
+			text-align: center;
+			font-size: 16px;
+			margin: 4px 4px;
+			cursor: pointer;
+		}*/
+
+
+	</style>
+	<style type="text/css">
+		#submit {
+			background-color: #009639;
+			padding: 3px 20px;
+			-moz-border-radius: 5px;
+			-webkit-border-radius: 5px;
+			border-radius: 6px;
+			color: #fff;
+			font-family: 'Poppins', sans-serif;
+			font-size: 16px;
+			cursor: pointer;
+			margin-right: 200px;
+		}
+
+			#submit:hover {
+				border: none;
+				background: #1a504c;
+				box-shadow: 0px 0px 1px #777;
+				cursor: pointer;
+			}
+		
+	</style>
+	<style>
+		.leaflet-container {
+			font-size: 16;
+    		font-weight: bold;
+    		font-family: 'POPPINS';
+		}
+		
+
+		.leaflet-container a.leaflet-popup-close-button {
+    		position: unset;
+		}
+
+		.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+   			 background: #3ba245;
+    		color: #292929;
+    		box-shadow: 5px 5px rgb(41 41 41 / 20%);
+		}
+
+	</style>
+	<style>
+		.drone {
+			background-image: url('noun_Drone_147982.svg');
+			background-size: 100px 100px;
+    		width: 100px;
+    		height: 100px;
+    		margin-left: -30px;
+    		margin-top: -30px;
+			text-align: center;
+			text-shadow: #1a504c;
+			line-height: 70px;
+			vertical-align: text-bottom;
+		}
+		.droneGrey {
+			background-image: url('noun_Drone_147982_Grey.svg');
+			background-size: 100px 100px;
+    		width: 100px;
+    		height: 100px;
+    		margin-left: -30px;
+    		margin-top: -30px;
+			text-align: center;
+			text-shadow: 1px 1px 1px #1a504c;
+			line-height: 70px;
+			vertical-align: text-bottom;
+		}
+
+		.mycluster {
+			width: 40px;
+			height: 40px;
+			background-color: #3ba245;
+			text-align: center;
+			font-size: 18px;
+			border-radius: 20;
+		}
+
+	</style>
+</head>
+<body>
+
+	<!-- <h1>Subdivisions Surveyed By UAV</h1>-->
+	<img src="images/outline_maps_home_work_black_24dp.png" style="width:22px;height:22px;" />
+	<input type="text" placeholder="SPI (Lot/Plan)" name="SPI" id="SPI" size="10" />
+	<button id="submit" onclick="zoomToSPI()">Go</button>
+
+
+	<img src="images/outline_explore_black_24dp.png" style="width:22px;height:22px;" />
+	<input type="text" placeholder="Latitude" name="lat" id="lat" size="8" />
+	<input type="text" placeholder="Longitude" name="lng" id="lng" size="8" />
+	<button id="submit" onclick="zoomTo()">Go</button>
+	<div id="map"></div>
+
+
+
+	<script>
+
+		//Base map layers
+		mapLink =
+			'<a href="http://www.esri.com/">Esri</a>';
+		wholink =
+			'i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+
+		var Streetmap = L.tileLayer(
+			'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+			attribution: '&copy; ' + mapLink + ', ' + wholink,
+			maxZoom: 20,
+		}),
+			Satellite = L.tileLayer(
+				'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+				attribution: '&copy; ' + mapLink + ', ' + wholink,
+				maxZoom: 20,
+			}),
+			Topographic = L.tileLayer(
+				'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+				attribution: '&copy; ' + mapLink + ', ' + wholink,
+				maxZoom: 20,
+			});
+
+		var baseMaps = {
+			"Streetmap": Streetmap,
+			"Satellite": Satellite,
+			"Topographic": Topographic
+		};
+		// initialize the map
+		var map = L.map('map', {
+			scrollWheelZoom: true,
+			zoomControl: false,
+			mousepositionControl: true,
+			layers: [Satellite]
+		}).setView([-33, 147], 6);
+
+		L.control.mousePosition({ position: 'bottomleft' }).addTo(map);
+		/*map.addEventListener('mousemove', function(ev){
+			lat = ev.latlng.lat;
+			lng = ev.latlng.lng;
+		});*/
+		var measureControl = L.control.measure({
+			position: "bottomright",
+			primaryLengthUnit: "meters",
+			primaryAreaUnit: "sqmeters"
+		});
+		measureControl.addTo(map);
+		L.control.layers(baseMaps).addTo(map);
+		L.control.scale({
+			metric: true,
+			imperial: false,
+			position: 'bottomleft'
+		}).addTo(map)
+
+		L.Control.Watermark = L.Control.extend({
+			onAdd: function (map) {
+				var img = L.DomUtil.create('img');
+
+				img.src = "images/intraxA_Scaled.png";
+				img.style.width = '200px';
+
+				return img;
+			},
+
+			onRemove: function (map) {
+				// Nothing to do here
+			}
+		});
+
+		L.control.watermark = function (opts) {
+			return new L.Control.Watermark(opts);
+		}
+
+		L.control.watermark({ position: 'topleft' }).addTo(map);
+
+		L.Control.textbox = L.Control.extend({
+			onAdd: function (map) {
+
+				var text = L.DomUtil.create('div');
+				text.id = "info_text";
+				text.innerHTML = "<p>Registered & Surveyed Subdivisions</p>"
+				return text;
+			},
+
+			onRemove: function (map) {
+				// Nothing to do here
+			}
+		});
+		L.control.textbox = function (opts) { return new L.Control.textbox(opts); }
+		L.control.textbox({ position: 'topleft' }).addTo(map);
+
+		/*//Function to zoom to a specific lat/lon
+		var controlSearch = new L.Control.Search({
+			position: 'topright',
+			textPlaceholder: 'Latitude,Longitude',
+			initial: false,
+			zoom: 12,
+			marker: false,
+			moveToLocation: function (text, title, map) {
+				console.log(text);
+				this._defaultMoveToLocation(latlng, title, map);
+			}
+			}
+		});*/
+
+		function zoomTo() {
+			var lat = document.getElementById("lat").value;
+			var lng = document.getElementById("lng").value;
+			map.setView(new L.LatLng(-lat, lng), 18);
+		}
+
+
+
+
+
+		$.getJSON("SurveyedSubdivisions.geojson",function(LGAs){
+			var houseIcon = L.icon({
+				iconUrl: 'noun_Drone_147982.svg',
+				iconSize: [60, 90]
+			});
+			
+			var SurveyedSubdivisions = L.geoJson( LGAs  , {
+				style: function(feature){
+				return { 
+					color: "#000000", weight: 1, fillColor: "#f5020b", fillOpacity: .2 
+					}
+				},
+				
+			
+				pointToLayer: function(geojsonPoint, latlng) {
+					var marker = L.marker(latlng, { icon: houseIcon });
+
+					marker.bindPopup("Plan Number: " + geojsonPoint.properties.Plan + '<br/>Lot: ' + geojsonPoint.properties.Lot
+						+ '<br/>Area: ' + geojsonPoint.properties.Area
+						+ '<br/>LGA: ' + geojsonPoint.properties.LGA);
+					return marker;
+					var layerControl = new L.Control.Layers(null, {
+						'Surveyed Subdivisions': marker
+					}).addTo(map);
+					
+				}
+				
+				
+		});
+		
+		map.fitBounds(SurveyedSubdivisions.getBounds(), {padding: [100,100]});
+		//Custom radius and icon create function
+		
+			var markers = L.markerClusterGroup({
+				iconCreateFunction: function (cluster) {
+					var markers = cluster.getAllChildMarkers();
+        			var html = '<div class="droneGrey">' + markers.length + '</div>';
+        			return L.divIcon({ html: html, className: "droneGrey"});
+   				},
+				spiderfyOnMaxZoom: true, showCoverageOnHover: true, zoomToBoundsOnClick: true
+			});
+			markers.addLayer(SurveyedSubdivisions);
+			map.addLayer(markers);
+			/*
+			var shownLayer, polygon;
+
+			function removePolygon() {
+				if (shownLayer) {
+					shownLayer.setOpacity(1);
+					shownLayer = null;
+				}
+				if (polygon) {
+					map.removeLayer(polygon);
+					polygon = null;
+				}
+			};
+
+			markers.on('clustermouseover', function (a) {
+				removePolygon();
+
+				a.layer.setOpacity(0.2);
+				shownLayer = a.layer;
+				polygon = L.polygon(a.layer.getConvexHull());
+				map.addLayer(polygon);
+			});
+			markers.on('clustermouseout', removePolygon);
+			map.on('zoomend', removePolygon);
+			*/
+		});
+
+
+		/*
+		var clusters = L.markerClusterGroup({ 
+    			iconCreateFunction: function (cluster) {
+				
+				var marker = cluster.getChildCount();
+				var n = 0;
+				for (var i = 0; i < markers.length; i+=1){
+					n += markers[i].number;
+				}
+
+				return new L.DivIcon({ html: n, className: 'mycluster', iconSize: new L.Point(40, 40) });
+				},
+				//'<div class="drone"><span>'
+    			spiderfyOnMaxZoom: true, showCoverageOnHover: true, zoomToBoundsOnClick: true
+			});
+			clusters.addLayer(SurveyedSubdivisions);
+			map.addLayer(clusters);
+		});
+		*/
+		// Set pin icon
+
+
+		// load GeoJSON from an external file
+		/*
+		$.getJSON("vic_plans_aug2020_aug2019.geojson", function (data) {
+			var houseIcon = L.icon({
+				iconUrl: 'real-estate.png',
+				iconSize: [30, 45]
+			});
+			var subdivisions = L.geoJson(data, {
+				pointToLayer: function (feature, latlng) {
+					var marker = L.marker(latlng, { icon: houseIcon });
+
+					marker.bindPopup("Plan Number: " + feature.properties.PlanNumber + '<br/>Number Of Lots: ' + feature.properties.LotNumber
+						+ '<br/>Locality: ' + feature.properties.locality + '<br/>LGA: ' + feature.properties.LGA);
+					return marker;
+					var layerControl = new L.Control.Layers(null, {
+						'Subdivisions': marker
+					}).addTo(map);
+				}
+				//}
+			});
+			var clusters = L.markerClusterGroup();
+			clusters.addLayer(subdivisions);
+			map.addLayer(clusters);
+
+		});
+		*/
+		/*
+		$.getJSON("nsw_plans_sep2018_oct2019.geojson", function (data) {
+			var houseIcon = L.icon({
+				iconUrl: 'real-estate.png',
+				iconSize: [30, 45]
+			});
+			var subdivisions = L.geoJson(data, {
+				pointToLayer: function (feature, latlng) {
+					var marker = L.marker(latlng, { icon: houseIcon });
+
+					marker.bindPopup("Plan Number: " + feature.properties.PlanNumber + '<br/>Number Of Lots: ' + feature.properties.LotNumber
+						+ '<br/>County: ' + feature.properties.County + '<br/>LGA: ' + feature.properties.LGA);
+					return marker;
+					var layerControl = new L.Control.Layers(null, {
+						'Subdivisions': marker
+					}).addTo(map);
+				}
+				//}
+			});
+			var clusters = L.markerClusterGroup();
+			clusters.addLayer(subdivisions);
+			map.addLayer(clusters);
+
+		});
+		*/
+
+
+	</script>
+	<!--<h1>Subdivisions Surveyed By UAV</h1>
+	<img src="images/intrax.png" alt="Intrax Logo" style="width:180px;height:54px;
+	position: absolute;
+	opacity: 0.5;
+	left: 0px;
+	top: 200px;">-->
+</body>
+</html>
